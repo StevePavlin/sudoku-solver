@@ -1,0 +1,382 @@
+
+if (window.File && window.FileReader && window.FileList && window.Blob) {
+  // Great success! All the File APIs are supported.
+} else {
+  alert('The File APIs are not fully supported in this browser.');
+}
+
+
+window.onload = function() {
+
+		var fileInput = document.getElementById('fileInput');
+		var fileDisplayArea = document.getElementById('fileDisplayArea');
+                var fileDisplayMessageArea = document.getElementById('fileDisplayMessageArea');
+                
+		fileInput.addEventListener('change', function(e) {
+			var file = fileInput.files[0];
+			var textType = /text.*/;
+
+			if (file.type.match(textType)) {
+				var reader = new FileReader();
+
+				reader.onload = function(e) {
+                                        fileDisplayMessageArea.innerText = 'Your file looks like this';
+                                        
+                                        fileDisplayArea.innerText = reader.result;
+                                        data = reader.result;
+                                        var mySudoku = new Sudoku(data);
+                                        mySudoku.fancyFill()
+					mySudoku.solve()
+				};
+
+				reader.readAsText(file);	
+                               
+			} else {
+				fileDisplayArea.innerText = "File not supported!";
+			}
+		});
+};
+
+
+
+
+function Sudoku(data) {
+    this.text = data;
+    this.board = []
+    this.emptyCells = []
+
+    // Find the length of one board.
+    count = 0
+
+    for (item = 0; item < this.text.length; item++) {
+	
+	if (this.text[item] == '|') {
+		break
+	// This character is an integer, or a blank spot
+	} else if ((!isNaN(this.text[item]) || this.text[item] == '.') && this.text[item] != ' ') {
+		count++
+	} 
+    }
+    
+    // Set an instance variable to keep track of the length of a board
+    this.N = count
+
+    
+
+    // Initialize the board
+    for (row = 0; row < this.N * this.N; row++) {
+	    this.board.push([])
+    }
+
+
+    
+
+    this.fill = function(lines) {
+
+	    // Fill the board with the lines given
+	    start = 0
+            end = this.N * this.N
+	    for (row = 0; row < this.N * this.N; row++) {
+		    this.board[row] += lines.slice(start, end)
+	            start = end
+		    end += this.N * this.N
+    	}
+    } 
+
+
+    this.fancyFill = function() {
+	    // Strip out the stuff we dont need
+	    var lines = this.text.replace(/\+/g, '').replace(/\./g, '0').replace(/\|/g, ' ').replace(/\-/g, '').replace(/\s+/g, '')
+	    
+    	    // Send to fill to construct the array
+	    this.fill(lines)
+    }
+
+    // Returns a string of the seperator row
+    this.getSeperatorRow = function() {
+	    
+	    for (item = 0; item < this.text.length; item++) {
+		if (this.text[item] == '-') {
+			// Found the start of a seperator row, now find the end
+			count = item
+			while (isNaN(this.text[count])) {
+				count++
+			}
+
+			// Found the start and end, now slice and return the string
+			return this.text.slice(item, count)	
+		 }
+	    }	
+    }
+			    
+
+
+    this.show = function() {
+
+    	    for (row = 0; row < this.N * this.N; row++) {
+		tempRow = ''
+		for (column = 0; column < this.N * this.N; column++) {
+			// Are we at a seperator column?
+			if (column % this.N == 0 && column != 0) {
+				tempRow += '| '
+			}
+			tempRow += this.board[row][column] + ' '
+		}
+
+		// Are we at a seperator row?
+		if (row % this.N == 0 && row != 0) {		
+			fileSolutionArea.innerText += this.getSeperatorRow() + '\n'
+		}
+
+		// If not, add a number row
+		fileSolutionArea.innerText += tempRow + '\n' 
+	}
+
+	    	fileSolutionMessageArea.innerText = 'Here is your solution'
+						
+    }	
+
+
+    // Getter and setter for the board    
+    this.getCell = function(row, column) {
+	  return this.board[row][column]
+    }
+
+    this.setCell = function(row, column, value) {
+	rowCopy = this.board[row]
+	rowCopy = rowCopy.substr(0, column) + value + rowCopy.substr(column + 1);
+	this.board[row] = rowCopy
+	
+
+    }
+
+
+    // Returns a boolean if the value is allowed at the given row
+    this.checkRow = function(row, value) {
+        // Check if the value exists in the row given. Returns false if it exists.		
+	for (column = 0; column < this.N * this.N; column++) {		
+		if (this.board[row][column] == value) {
+			return false
+		}
+	}
+	return true	
+    }
+
+ 
+    // Returns a boolean if the value is allowed at the give column
+    this.checkColumn = function(column, value) {
+	
+	for (row = 0; row < this.N * this.N; row++) {
+    		if (this.board[row][column] == value) {
+			return false
+		}
+	}
+	return true	
+	
+    }
+
+    // Returns a boolean if the value is allowed in one of the boards squares
+    this.checkSquare = function(row, column, value) {
+	  
+	    square = ''
+
+	    // Variables to find the corner of the square
+	    lowerCol = 0
+	    lowerRow = 0
+	    
+
+	    // Find column and row bounds
+	    while (column >= lowerCol + this.N) {
+		  lowerCol += this.N
+	    }
+
+	    while (row >= lowerRow + this.N) {
+		  lowerRow += this.N
+	    }
+	
+	 
+	    // Slice this.N values into the column
+	    upperCol = lowerCol + this.N
+	    
+	    // Loop through rows and slice the square
+	    for (i = lowerRow; i < lowerRow + this.N; i++) {
+		    square += this.board[i].slice(lowerCol, upperCol)
+	    }
+	    
+	    
+
+	    // The square has been built, now check it for the values and return accordingly. 
+    	    for (item = 0; item < square.length; item++) {
+		    if (square[item] == value) {
+			    return false
+		    }
+	    }
+	  
+	    return true
+		    	
+	}
+
+
+    // Returns a boolean if the value is allowed at a specific row and column on the board
+    this.checkValue = function(row, column, value) {
+	if (this.checkRow(row, value) && this.checkColumn(column, value) && this.checkSquare(row, column, value)) {
+		return true
+	} else {
+	       	return false
+	}
+    } 
+
+
+   
+
+   // Returns a boolean if the current board is a solution
+   this.isSolution = function() {
+
+	for (row = 0; row < this.N * this.N; row++) {
+		for (column = 0; column < this.N * this.N; column++) {
+			for (n = 1; n <= 9; n++) {
+				if (this.checkValue(row, column, n)) {
+					return false
+				}
+			}
+		
+		}
+	}
+	
+	return true
+    }
+   
+ 
+   // Find the possibilities of each empty cell generated and save them into the cells array at position 2
+   this.generatePossibilities = function() {
+
+	for (cell = 0; cell < this.emptyCells.length; cell++) {
+		// Variables of the cell
+		cellRow = this.emptyCells[cell][0]
+		cellCol = this.emptyCells[cell][1]
+		for (n = 1; n <= 9; n++) {
+			// If this number 1-9 works, add it to the possibilities for the given cell
+			if (this.checkValue(cellRow, cellCol, n)) {
+				this.emptyCells[cell][2].push(n)
+			}
+		}
+	}
+   }			
+
+   // Finds all the empty cells in the board	 
+   this.findEmptyCells = function() {
+
+	   for (row = 0; row < this.N * this.N; row++) {
+		   for (column = 0; column < this.N * this.N; column++) {
+			   if (this.board[row][column] == 0) {
+				   // Log the row, column, and possible values for this spot
+				   this.emptyCells.push([row, column, []])
+				
+					   
+			   }
+		   }
+	   }
+		// Now, generate possibilities for all the cells
+		this.generatePossibilities();
+	}
+
+   // Solves the current sudoku board
+   this.solve = function() {
+   	// Find empty cells and generate possible solutions for them
+	this.findEmptyCells();
+
+	currentCell = 0	
+	iterations = 0
+	// Loop through each empty cell
+	while (currentCell != this.emptyCells.length) {
+		iterations++
+	
+		// In the case that cell 1 was unsolvable, exit before it backtracks another
+		if (currentCell == -1) {
+			console.log('This board is unsolvable.')
+			return
+		}
+
+		
+		// Save the cells info
+		cellRow = this.emptyCells[currentCell][0]
+		cellCol = this.emptyCells[currentCell][1]
+		cellPossible = this.emptyCells[currentCell][2]
+		cellValue = parseInt(this.board[cellRow][cellCol])
+	
+		// Find where the current number on the board is in the array of possibilities
+		if (cellValue == 0) {	
+			cellIndex = 0
+		} else {
+			cellIndex = cellPossible.indexOf(parseInt(this.board[cellRow][cellCol])) + 1
+		}
+
+						
+	
+		// Loop through the values this cell can be, and try them.
+		for (val = cellIndex; val < cellPossible.length; val++) {
+			found = false
+			if (this.checkValue(cellRow, cellCol, cellPossible[val]) && found == false) {
+				// This value is good set it and move on
+				found = true
+				currentCell++
+				this.setCell(cellRow, cellCol, cellPossible[val])
+				break;		
+			}
+		}
+		
+		if (!found) {
+			this.setCell(cellRow, cellCol, 0)
+			currentCell--	
+		}	
+	}
+
+	alert('Solution found! It took ' + iterations + ' iterations.')
+	// Show the solution
+	this.show()		
+}		
+	   
+
+   
+
+   // Brute force method, extremely inefficent D:
+   this.solveWithBruteForce = function() {
+
+	   iterations = 0 
+	   solved = false
+                                          
+	   while(!solved) {
+       		iterations++		   
+	   
+		for (cell = 0; cell < this.emptyCells.length; cell++) {
+			
+			// Assign this cell some variables.
+			cellRow = this.emptyCells[cell][0]
+			cellCol = this.emptyCells[cell][1]
+			cellNums = this.emptyCells[cell][2]
+
+			// Generate a random index out of the possibilites, and use it to guess the cell.
+			randomIndex = Math.floor(Math.random() * cellNums.length)	
+		
+			// Guess the value.
+			this.setCell(cellRow, cellCol, cellNums[randomIndex])
+			
+			// Check if this round of values solved it.
+			
+		}
+			if (this.isSolution()) {
+				solved = true
+			}
+			// If not, continue to bruteforce.	
+		}
+
+	    // It is solved!
+	   console.log('Board solved! It took ' + iterations + ' iterations!')
+	   for (row = 0; row < this.N * this.N; row++) {
+		   console.log(this.board[row].split())
+		    
+	}	   
+				
+   }	
+	
+}	
